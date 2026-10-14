@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+  <title th:text="${spotForm.spotId == null ? '釣り場の追加' : '釣り場の編集'}">釣り場の追加</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+</head>
+<body>
+<div layout:fragment="content">
+  <div class="page-header">
+    <h4 class="mb-0 fw-bold">
+      <i class="bi bi-anchor me-2 text-primary"></i>
+      <span th:text="${spotForm.spotId == null ? '釣り場の追加' : '釣り場の編集'}">釣り場の追加</span>
+    </h4>
+  </div>
+
+  <form th:action="${spotForm.spotId == null} ? @{/spots} : @{/spots/{id}(id=${spotForm.spotId})}"
+        th:object="${spotForm}" method="post" class="card card-body" style="max-width:640px;">
+
+    <div class="row">
+      <div class="col-md-8 mb-3">
+        <label class="form-label">釣り場名 <span class="text-danger">*</span></label>
+        <input type="text" th:field="*{name}" class="form-control" placeholder="例: 〇〇漁港">
+        <div class="text-danger small" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></div>
+      </div>
+      <div class="col-md-4 mb-3">
+        <label class="form-label">都道府県</label>
+        <input type="text" th:field="*{prefecture}" class="form-control" placeholder="例: 千葉県">
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">場所(地図をクリックして位置を指定してください) <span class="text-danger">*</span></label>
+      <div id="pickerMap" style="height:300px;border-radius:.375rem;" class="mb-2"></div>
+      <input type="hidden" th:field="*{latitude}" id="latitudeInput">
+      <input type="hidden" th:field="*{longitude}" id="longitudeInput">
+      <p class="small text-muted mb-0" id="pickedLabel">位置は未設定です</p>
+      <div class="text-danger small" th:if="${#fields.hasErrors('latitude')} or ${#fields.hasErrors('longitude')}">
+        地図をクリックして位置を指定してください
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">メモ</label>
+      <textarea th:field="*{memo}" class="form-control" rows="2" placeholder="特徴、駐車場の有無など"></textarea>
+      <div class="text-danger small" th:if="${#fields.hasErrors('memo')}" th:errors="*{memo}"></div>
+    </div>
+
+    <input type="hidden" th:field="*{spotId}">
+
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>保存</button>
+      <a th:href="@{/spots}" class="btn btn-outline-secondary">キャンセル</a>
+    </div>
+  </form>
+</div>
+
+<th:block layout:fragment="scripts">
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script th:inline="javascript">
+    const initialLat = /*[[${spotForm.latitude}]]*/ null;
+    const initialLng = /*[[${spotForm.longitude}]]*/ null;
+
+    const startLat = initialLat != null ? initialLat : 35.6809591;
+    const startLng = initialLng != null ? initialLng : 139.7673068;
+
+    const map = L.map('pickerMap').setView([startLat, startLng], initialLat != null ? 12 : 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    let marker = null;
+    if (initialLat != null && initialLng != null) {
+      marker = L.marker([initialLat, initialLng]).addTo(map);
+      document.getElementById('pickedLabel').textContent =
+        '位置を設定しました(' + initialLat.toFixed(5) + ', ' + initialLng.toFixed(5) + ')';
+    }
+
+    map.on('click', function (e) {
+      const { lat, lng } = e.latlng;
+      document.getElementById('latitudeInput').value = lat.toFixed(6);
+      document.getElementById('longitudeInput').value = lng.toFixed(6);
+      document.getElementById('pickedLabel').textContent =
+        '位置を設定しました(' + lat.toFixed(5) + ', ' + lng.toFixed(5) + ')';
+      if (marker) {
+        marker.setLatLng(e.latlng);
+      } else {
+        marker = L.marker(e.latlng).addTo(map);
+      }
+    });
+  </script>
+</th:block>
+</body>
+</html>

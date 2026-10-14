@@ -1,0 +1,36 @@
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+### Eclipse ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+.metadata/
+Servers/
+bin/
+
+### macOS ###
+.DS_Store
+
+### VS Code ###
+.vscode/
+
+### アプリ固有のデータ(ローカル実行時に作られるファイル) ###
+/data/
+
+### ポートフォリオ提出用ファイル(ソースコードではないためリポジトリには含めない) ###
+*.pdf

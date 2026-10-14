@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head><title>釣り場一覧</title></head>
+<body>
+<div layout:fragment="content">
+  <div class="page-header d-flex justify-content-between align-items-center">
+    <h4 class="mb-0 fw-bold"><i class="bi bi-anchor me-2 text-primary"></i>釣り場・漁港一覧</h4>
+    <a th:href="@{/spots/new}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-lg me-1"></i>釣り場を追加
+    </a>
+  </div>
+  <p class="text-muted small">
+    有名な漁港をあらかじめ登録しています(位置は市区町村レベルの目安です)。よく行く釣り場は自分で追加でき、
+    釣果の新規登録時にリストから選べます。
+  </p>
+
+  <div class="card">
+    <div class="card-body p-0 table-responsive-wrap">
+      <table class="table table-hover mb-0 align-middle">
+        <thead>
+          <tr>
+            <th class="ps-3">名称</th>
+            <th>都道府県</th>
+            <th>種別</th>
+            <th>メモ</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr th:each="s : ${spots}">
+            <td class="ps-3 fw-semibold" th:text="${s.name}">〇〇漁港</td>
+            <td th:text="${s.prefecture}">〇〇県</td>
+            <td>
+              <span th:if="${s.builtIn}" class="badge bg-secondary">初期データ</span>
+              <span th:unless="${s.builtIn}" class="badge bg-primary">自分で追加</span>
+            </td>
+            <td class="text-muted small" th:text="${s.memo}"></td>
+            <td class="text-end pe-3">
+              <a th:href="@{/spots/{id}/edit(id=${s.id})}" class="btn btn-outline-secondary btn-sm me-1">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <form th:action="@{/spots/{id}/delete(id=${s.id})}" method="post" class="d-inline"
+                    onsubmit="return confirm('この釣り場を削除しますか？')">
+                <button type="submit" class="btn btn-outline-danger btn-sm">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(spots)}">
+            <td colspan="5" class="text-center text-muted py-4">釣り場が登録されていません</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card-footer text-muted small">
+      <span th:text="${#lists.size(spots)}">0</span> 件
+    </div>
+  </div>
+</div>
+</body>
+</html>

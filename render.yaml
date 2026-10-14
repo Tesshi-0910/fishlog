@@ -1,0 +1,35 @@
+databases:
+  - name: fishlog-db
+    plan: free
+    databaseName: fishlog_db
+    user: fishlog_user
+
+services:
+  - type: web
+    name: fishlog
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: render
+      - key: DB_HOST
+        fromDatabase:
+          name: fishlog-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: fishlog-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: fishlog-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: fishlog-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: fishlog-db
+          property: password

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+  <title>地図で見る</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    #catchMap { height: 70vh; border-radius: .5rem; }
+    .leaflet-popup-content img { max-width: 160px; border-radius: .25rem; display:block; margin-bottom:.35rem; }
+    .map-legend { display:flex; gap:18px; align-items:center; flex-wrap:wrap; }
+    .map-legend .dot { display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+    .map-legend .dot.catch { background:#135a85; }
+    .map-legend .dot.spot { background:#d9822b; }
+  </style>
+</head>
+<body>
+<div layout:fragment="content">
+  <div class="page-header d-flex justify-content-between align-items-center">
+    <h4 class="mb-0 fw-bold"><i class="bi bi-geo-alt me-2 text-primary"></i>釣果マップ</h4>
+    <a th:href="@{/catches}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-list-ul me-1"></i>一覧に戻る</a>
+  </div>
+  <div class="card card-body">
+    <div class="map-legend mb-2">
+      <div class="form-check form-switch mb-0">
+        <input class="form-check-input" type="checkbox" id="toggleCatches" checked>
+        <label class="form-check-label small" for="toggleCatches"><span class="dot catch"></span>自分の釣果</label>
+      </div>
+      <div class="form-check form-switch mb-0">
+        <input class="form-check-input" type="checkbox" id="toggleSpots" checked>
+        <label class="form-check-label small" for="toggleSpots"><span class="dot spot"></span>漁港・釣り場</label>
+      </div>
+    </div>
+    <div id="catchMap"></div>
+    <p class="text-muted small mt-2 mb-0">緯度・経度が登録されている釣果のみ表示されます。登録フォームの地図をクリックすると位置を設定できます。</p>
+  </div>
+</div>
+
+<th:block layout:fragment="scripts">
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script th:inline="javascript">
+    const map = L.map('catchMap').setView([35.6809591, 139.7673068], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    const catchIcon = L.divIcon({
+      className: '', html: '<div style="width:14px;height:14px;border-radius:50%;background:#135a85;border:2px solid #fff;box-shadow:0 0 2px rgba(0,0,0,.5);"></div>',
+      iconSize: [14, 14], iconAnchor: [7, 7]
+    });
+    const spotIcon = L.divIcon({
+      className: '', html: '<div style="width:14px;height:14px;border-radius:50%;background:#d9822b;border:2px solid #fff;box-shadow:0 0 2px rgba(0,0,0,.5);"></div>',
+      iconSize: [14, 14], iconAnchor: [7, 7]
+    });
+
+    const catchLayer = L.layerGroup().addTo(map);
+    const spotLayer = L.layerGroup().addTo(map);
+
+    const catchPointsUrl = /*[[@{/catches/map/points}]]*/ '/catches/map/points';
+    const spotPointsUrl = /*[[@{/spots/map/points}]]*/ '/spots/map/points';
+
+    const allBounds = [];
+
+    const catchesPromise = fetch(catchPointsUrl).then(res => res.json()).then(points => {
+      points.forEach(p => {
+        const popupHtml = (p.photoFilename ? `<img src="/photos/${p.photoFilename}">` : '') +
+          `<strong>${p.species}</strong>(${p.quantity}匹)<br>${p.locationName}<br>` +
+          `${p.caughtAt.replace('T', ' ')}` +
+          (p.sizeCm ? `<br>${p.sizeCm} cm` : '');
+        L.marker([p.latitude, p.longitude], { icon: catchIcon }).addTo(catchLayer).bindPopup(popupHtml);
+        allBounds.push([p.latitude, p.longitude]);
+      });
+    });
+
+    const spotsPromise = fetch(spotPointsUrl).then(res => res.json()).then(points => {
+      points.forEach(p => {
+        const popupHtml = `<strong>${p.name}</strong>` + (p.prefecture ? `<br>${p.prefecture}` : '');
+        L.marker([p.latitude, p.longitude], { icon: spotIcon }).addTo(spotLayer).bindPopup(popupHtml);
+        allBounds.push([p.latitude, p.longitude]);
+      });
+    });
+
+    Promise.all([catchesPromise, spotsPromise]).then(() => {
+      if (allBounds.length > 0) {
+        map.fitBounds(allBounds, { padding: [30, 30] });
+      }
+    });
+
+    document.getElementById('toggleCatches').addEventListener('change', function (e) {
+      if (e.target.checked) { map.addLayer(catchLayer); } else { map.removeLayer(catchLayer); }
+    });
+    document.getElementById('toggleSpots').addEventListener('change', function (e) {
+      if (e.target.checked) { map.addLayer(spotLayer); } else { map.removeLayer(spotLayer); }
+    });
+  </script>
+</th:block>
+</body>
+</html>

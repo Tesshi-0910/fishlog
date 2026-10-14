@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+  <title>新規登録</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    .species-line { background:#f8fafb; border:1px solid #e3e8eb; border-radius:.5rem; padding:12px; margin-bottom:10px; position:relative; }
+    .species-line .remove-line { position:absolute; top:6px; right:8px; }
+  </style>
+</head>
+<body>
+<div layout:fragment="content">
+  <div class="page-header">
+    <h4 class="mb-0 fw-bold"><i class="bi bi-pencil-square me-2 text-primary"></i>釣果の新規登録</h4>
+    <p class="text-muted small mb-0 mt-1">1回の釣行で複数の魚種を釣った場合は、「魚種を追加」で行を増やしてまとめて登録できます。</p>
+  </div>
+
+  <form th:action="@{/catches}" th:object="${catchBatchForm}" method="post" enctype="multipart/form-data" class="card card-body" style="max-width:720px;">
+
+    <h3>釣行情報(共通)</h3>
+    <div class="row">
+      <div class="col-md-6 mb-3">
+        <label class="form-label">釣れた日時 <span class="text-danger">*</span></label>
+        <input type="datetime-local" th:field="*{caughtAt}" class="form-control">
+        <div class="text-danger small" th:if="${#fields.hasErrors('caughtAt')}" th:errors="*{caughtAt}"></div>
+      </div>
+      <div class="col-md-6 mb-3">
+        <label class="form-label">場所 <span class="text-danger">*</span></label>
+        <input type="text" th:field="*{locationName}" class="form-control" placeholder="例: 〇〇漁港" id="locationNameInput">
+        <div class="text-danger small" th:if="${#fields.hasErrors('locationName')}" th:errors="*{locationName}"></div>
+      </div>
+    </div>
+
+    <div class="mb-3" th:if="${not #lists.isEmpty(spots)}">
+      <label class="form-label small text-muted mb-1">登録済みの釣り場から選ぶ(任意)</label>
+      <select id="spotSelect" class="form-select form-select-sm">
+        <option value="">選択してください</option>
+        <option th:each="s : ${spots}"
+                th:value="${s.id}"
+                th:text="${s.prefecture != null ? s.name + '(' + s.prefecture + ')' : s.name}"
+                th:attr="data-name=${s.name},data-lat=${s.latitude},data-lng=${s.longitude}"></option>
+      </select>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">釣った場所(地図をクリックすると位置が設定されます・任意)</label>
+      <div id="pickerMap" style="height:240px;border-radius:.375rem;"></div>
+      <input type="hidden" th:field="*{latitude}" id="latitudeInput">
+      <input type="hidden" th:field="*{longitude}" id="longitudeInput">
+      <p class="small text-muted mt-1 mb-0" id="pickedLabel">位置は未設定です</p>
+
+      <div class="form-check mt-2">
+        <input class="form-check-input" type="checkbox" th:field="*{saveAsFavoriteSpot}" id="saveAsFavoriteSpot" disabled>
+        <label class="form-check-label small" for="saveAsFavoriteSpot">
+          この場所をお気に入りの釣り場として登録する(「釣り場一覧」に追加され、次回からプルダウンで選べます)
+        </label>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">写真(釣行全体で1枚・任意)</label>
+      <input type="file" th:field="*{photo}" accept="image/*" class="form-control">
+    </div>
+
+    <div class="mb-4">
+      <label class="form-label">メモ</label>
+      <textarea th:field="*{memo}" class="form-control" rows="2" placeholder="仕掛け、ルアー、天候、潮まわりなど"></textarea>
+      <div class="text-danger small" th:if="${#fields.hasErrors('memo')}" th:errors="*{memo}"></div>
+    </div>
+
+    <h3 class="d-flex justify-content-between align-items-center">
+      <span>釣れた魚種</span>
+      <button type="button" id="addLineBtn" class="btn btn-outline-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>魚種を追加</button>
+    </h3>
+    <div class="text-danger small mb-2" th:if="${#fields.hasErrors('lines')}" th:errors="*{lines}"></div>
+
+    <div id="linesContainer">
+      <div class="species-line" th:each="line, stat : *{lines}">
+        <button type="button" class="btn btn-sm btn-outline-danger remove-line" onclick="removeLine(this)" th:if="${stat.index > 0}">
+          <i class="bi bi-x-lg"></i>
+        </button>
+        <div class="row g-2">
+          <div class="col-sm-4">
+            <label class="form-label small text-muted mb-1">魚種 <span class="text-danger">*</span></label>
+            <input type="text" th:field="*{lines[__${stat.index}__].species}" class="form-control form-control-sm" placeholder="例: アジ">
+            <div class="text-danger small" th:if="${#fields.hasErrors('lines[__${stat.index}__].species')}" th:errors="*{lines[__${stat.index}__].species}"></div>
+          </div>
+          <div class="col-sm-2">
+            <label class="form-label small text-muted mb-1">尾数 <span class="text-danger">*</span></label>
+            <input type="number" min="1" th:field="*{lines[__${stat.index}__].quantity}" class="form-control form-control-sm">
+            <div class="text-danger small" th:if="${#fields.hasErrors('lines[__${stat.index}__].quantity')}" th:errors="*{lines[__${stat.index}__].quantity}"></div>
+          </div>
+          <div class="col-sm-3">
+            <label class="form-label small text-muted mb-1">サイズ(cm)</label>
+            <input type="number" step="0.1" th:field="*{lines[__${stat.index}__].sizeCm}" class="form-control form-control-sm">
+          </div>
+          <div class="col-sm-3">
+            <label class="form-label small text-muted mb-1">重さ(g)</label>
+            <input type="number" th:field="*{lines[__${stat.index}__].weightG}" class="form-control form-control-sm">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- JSで行を追加する際に複製するテンプレート -->
+    <template id="lineTemplate">
+      <div class="species-line">
+        <button type="button" class="btn btn-sm btn-outline-danger remove-line" onclick="removeLine(this)">
+          <i class="bi bi-x-lg"></i>
+        </button>
+        <div class="row g-2">
+          <div class="col-sm-4">
+            <label class="form-label small text-muted mb-1">魚種 <span class="text-danger">*</span></label>
+            <input type="text" name="__NAME__.species" class="form-control form-control-sm" placeholder="例: アジ">
+          </div>
+          <div class="col-sm-2">
+            <label class="form-label small text-muted mb-1">尾数 <span class="text-danger">*</span></label>
+            <input type="number" min="1" name="__NAME__.quantity" value="1" class="form-control form-control-sm">
+          </div>
+          <div class="col-sm-3">
+            <label class="form-label small text-muted mb-1">サイズ(cm)</label>
+            <input type="number" step="0.1" name="__NAME__.sizeCm" class="form-control form-control-sm">
+          </div>
+          <div class="col-sm-3">
+            <label class="form-label small text-muted mb-1">重さ(g)</label>
+            <input type="number" name="__NAME__.weightG" class="form-control form-control-sm">
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <div class="d-flex gap-2 mt-3">
+      <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>保存</button>
+      <a th:href="@{/catches}" class="btn btn-outline-secondary">キャンセル</a>
+    </div>
+  </form>
+</div>
+
+<th:block layout:fragment="scripts">
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const map = L.map('pickerMap').setView([35.6809591, 139.7673068], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    let marker = null;
+    const favoriteCheckbox = document.getElementById('saveAsFavoriteSpot');
+
+    function setPicked(lat, lng, fromExistingSpot) {
+      document.getElementById('latitudeInput').value = lat.toFixed(6);
+      document.getElementById('longitudeInput').value = lng.toFixed(6);
+      document.getElementById('pickedLabel').textContent =
+        '位置を設定しました(' + lat.toFixed(5) + ', ' + lng.toFixed(5) + ')';
+      if (marker) {
+        marker.setLatLng([lat, lng]);
+      } else {
+        marker = L.marker([lat, lng]).addTo(map);
+      }
+      map.setView([lat, lng], 13);
+
+      // 既存の釣り場を選んだ場合は、重複登録を避けるためお気に入りチェックは不要にする
+      favoriteCheckbox.disabled = !!fromExistingSpot;
+      favoriteCheckbox.checked = false;
+    }
+
+    const spotSelect = document.getElementById('spotSelect');
+    if (spotSelect) {
+      spotSelect.addEventListener('change', function () {
+        const opt = spotSelect.options[spotSelect.selectedIndex];
+        if (!opt.value) {
+          return;
+        }
+        const lat = parseFloat(opt.dataset.lat);
+        const lng = parseFloat(opt.dataset.lng);
+        document.getElementById('locationNameInput').value = opt.dataset.name;
+        setPicked(lat, lng, true);
+      });
+    }
+
+    map.on('click', function (e) {
+      // クリック時は地図のズームは変えず、位置の設定のみ行う
+      const { lat, lng } = e.latlng;
+      document.getElementById('latitudeInput').value = lat.toFixed(6);
+      document.getElementById('longitudeInput').value = lng.toFixed(6);
+      favoriteCheckbox.disabled = false;
+      document.getElementById('pickedLabel').textContent =
+        '位置を設定しました(' + lat.toFixed(5) + ', ' + lng.toFixed(5) + ')';
+      if (marker) {
+        marker.setLatLng(e.latlng);
+      } else {
+        marker = L.marker(e.latlng).addTo(map);
+      }
+    });
+
+    // ---- 魚種行の追加・削除 ----
+    const container = document.getElementById('linesContainer');
+    const template = document.getElementById('lineTemplate');
+
+    function reindexLines() {
+      const rows = container.querySelectorAll('.species-line');
+      rows.forEach((row, i) => {
+        row.querySelectorAll('input').forEach(input => {
+          const field = input.name.split('.').pop();
+          input.name = 'lines[' + i + '].' + field;
+        });
+        const removeBtn = row.querySelector('.remove-line');
+        if (removeBtn) {
+          removeBtn.style.display = (i === 0) ? 'none' : '';
+        }
+      });
+    }
+
+    document.getElementById('addLineBtn').addEventListener('click', function () {
+      const clone = template.content.cloneNode(true);
+      const nextIndex = container.querySelectorAll('.species-line').length;
+      clone.querySelectorAll('input').forEach(input => {
+        const field = input.name.replace('__NAME__.', '');
+        input.name = 'lines[' + nextIndex + '].' + field;
+      });
+      container.appendChild(clone);
+    });
+
+    function removeLine(btn) {
+      btn.closest('.species-line').remove();
+      reindexLines();
+    }
+  </script>
+</th:block>
+</body>
+</html>

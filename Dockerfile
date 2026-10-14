@@ -1,0 +1,13 @@
+# ---- Build stage ----
+FROM eclipse-temurin:21-jdk-jammy AS build
+WORKDIR /app
+COPY . .
+RUN chmod +x gradlew && ./gradlew bootJar --no-daemon -x test
+
+# ---- Run stage ----
+FROM eclipse-temurin:21-jre-jammy
+WORKDIR /app
+COPY --from=build /app/build/libs/*.jar app.jar
+EXPOSE 8080
+ENV SPRING_PROFILES_ACTIVE=render
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
