@@ -7,7 +7,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
@@ -58,9 +57,10 @@ public class Catch {
     @Column(name = "photo_filename", length = 255)
     private String photoFilename;
 
-    /** メモ(仕掛け、ルアー、天候、潮など自由記述) */
-    @Lob
-    @Column(name = "memo")
+    /** メモ(仕掛け、ルアー、天候、潮など自由記述)。
+     * 文字数制限なしで保存したいが、@LobだとPostgreSQLで「ラージオブジェクト」扱いになり
+     * オートコミットモードでエラーになるため、columnDefinitionでTEXT型を明示している。 */
+    @Column(name = "memo", columnDefinition = "TEXT")
     private String memo;
 
     @Column(name = "created_at", nullable = false, updatable = false)
