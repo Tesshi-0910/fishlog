@@ -15,11 +15,13 @@ public interface CatchRepository extends JpaRepository<Catch, Long> {
      * 魚種・場所(部分一致)・期間で絞り込み検索する。
      * 各パラメータがnullの場合はその条件を無視する。
      */
+    // PostgreSQLはバインド変数だけを「IS NULL」と比較すると型を推論できずエラーになるため、
+    // CAST(... AS ...)で明示的に型を指定している(H2でも問題なく動作する)。
     @Query("SELECT c FROM Catch c WHERE "
-            + "(:species IS NULL OR c.species LIKE %:species%) AND "
-            + "(:location IS NULL OR c.locationName LIKE %:location%) AND "
-            + "(:from IS NULL OR c.caughtAt >= :from) AND "
-            + "(:to IS NULL OR c.caughtAt <= :to) "
+            + "(CAST(:species AS string) IS NULL OR c.species LIKE %:species%) AND "
+            + "(CAST(:location AS string) IS NULL OR c.locationName LIKE %:location%) AND "
+            + "(CAST(:from AS timestamp) IS NULL OR c.caughtAt >= :from) AND "
+            + "(CAST(:to AS timestamp) IS NULL OR c.caughtAt <= :to) "
             + "ORDER BY c.caughtAt DESC")
     List<Catch> search(@Param("species") String species,
             @Param("location") String location,
